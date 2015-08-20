@@ -12,7 +12,7 @@ use GuzzleHttp\Client;
  * Author: Nocks
  * Plugin URI: https://nocks.nl
  * Description: Payment gateway for Nocks
- * Version: 0.0.1
+ * Version: 0.0.2
  */
 
 add_action( 'plugins_loaded', 'init_nocks_nifty' );
@@ -45,7 +45,6 @@ function init_nocks_nifty()
             $this->valid_currencies = array('EUR', 'USD', 'NLG', 'BTC');
 
             $this->id                   = 'nocks_nifty';
-            $this->domain               = 'https://nocks.nl/';
             $this->has_fields           = true;
             $this->method_title         = __( 'Nocks Nifty', 'woocommerce' );
 
@@ -56,7 +55,15 @@ function init_nocks_nifty()
             $this->description 		    = $this->get_option( 'description' );
             $this->bitcoin_address      = $this->get_option( 'bitcoin_address' );
             $this->guldencoin_address   = $this->get_option( 'guldencoin_address');
+            $this->secure               = $this->get_option( 'secure');
             $this->test                 = $this->get_option( 'test');
+
+            // Optional secure SSL connection
+            $this->domain  = 'http://nocks.nl/';
+            if($this->secure)
+            {
+                $this->domain  = 'https://nocks.nl/';
+            }
 
             $this->client = new Client([
                 'base_url' => $this->domain.'api/'
@@ -65,7 +72,6 @@ function init_nocks_nifty()
             $this->log = new WC_Logger();
 
             add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
-
             add_action( 'woocommerce_api_wc_gateway_' . $this->id, array( $this, 'nocks_nifty_notification' ) );
 
             if ( !$this->is_valid_for_use() ) $this->enabled = false;
@@ -85,23 +91,24 @@ function init_nocks_nifty()
             }
 
             $totalAmount = $this->get_cart_total();
+            $maxBtcAmount = 1;
 
-            if($currency == 'BTC' && $totalAmount > 0.5)
+            if($currency == 'BTC' && $totalAmount > $maxBtcAmount)
             {
                 return false;
             }
 
-            if($currency == 'NLG' && $totalAmount > 100000)
+            if($currency == 'NLG' && $totalAmount > $maxBtcAmount/$this->get_outgoing_currency_price())
             {
                 return false;
             }
 
-            if($currency == 'EUR' && $totalAmount > 100)
+            if($currency == 'EUR' && $totalAmount > $maxBtcAmount*$this->get_bitcoin_price('EUR'))
             {
                 return false;
             }
 
-            if($currency == 'USD' && $totalAmount > 120)
+            if($currency == 'USD' && $totalAmount > $maxBtcAmount*$this->get_bitcoin_price('USD'))
             {
                 return false;
             }
@@ -166,6 +173,17 @@ function init_nocks_nifty()
                     'type' 			=> 'text',
                     'description' => __( 'Please enter your Guldencoin address to receive payout in Guldencoin', 'woocommerce' ),
                     'default' => '',
+                ),
+                'secure' => array(
+                    'title'       => __( 'Secure SSL connection', 'woocommerce' ),
+                    'type'        => 'select',
+                    'description' => __( 'When enabled the connection will be secured with SSL.', 'woocommerce' ),
+                    'default'     => '0',
+                    'desc_tip'    => true,
+                    'options'     => array(
+                        '0' => __( 'Disabled', 'woocommerce' ),
+                        '1' => __( 'Enabled', 'woocommerce' )
+                    )
                 ),
                 'test' => array(
                     'title'       => __( 'Testmode', 'woocommerce' ),
