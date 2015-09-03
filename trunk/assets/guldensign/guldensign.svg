@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" >
+<svg xmlns="http://www.w3.org/2000/svg">
+<metadata></metadata>
+<defs>
+<font id="guldensignmedium" horiz-adv-x="4096" >
+<font-face units-per-em="4096" ascent="3277" descent="-819" />
+<missing-glyph horiz-adv-x="500" />
+<glyph horiz-adv-x="0" />
+<glyph unicode="&#xd;" />
+<glyph unicode="&#x120;" d="M0 1475q0 200 53 391t148 353t231 298t298 231.5t353 148.5t392 53q299 0 568.5 -114t474.5 -318l-224 -224q-161 160 -372.5 249.5t-446.5 89.5q-236 0 -450.5 -92t-369.5 -247t-247 -369.5t-92 -449.5q0 -236 92 -450.5t247 -369.5t369.5 -247t450.5 -92 q216 0 415 77.5t349.5 210.5t252 318t130.5 394h-1147v316h1158h317v-157q0 -201 -53 -392t-148.5 -353t-231.5 -298t-298 -231t-353 -148t-391 -53q-201 0 -392 53t-353 148t-298 231t-231 298t-148 353t-53 392z" />
+<glyph unicode="&#x25fc;" horiz-adv-x="500" d="M0 0z" />
+</font>
+</defs></svg> 

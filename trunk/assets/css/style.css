@@ -1,0 +1,40 @@
+.nocks-nifty-payment-fields .incoming_currency {
+    margin: 12px 0px 12px 0px;
+}
+.nocks-nifty-payment-fields .incoming_currency input{
+    margin:0;padding:0;
+    -webkit-appearance:none;
+    -moz-appearance:none;
+    appearance:none;
+    display:none;
+}
+.nocks-nifty-payment-fields .incoming_currency .coin { width: 48px; }
+.nocks-nifty-payment-fields .incoming_currency .coin.btc{background-image:url('../img/btc.png');}
+.nocks-nifty-payment-fields .incoming_currency .coin.nlg{background-image:url('../img/nlg.png');}
+
+.nocks-nifty-payment-fields .incoming_currency input:active +.coin{opacity: .9;}
+.nocks-nifty-payment-fields .incoming_currency input:checked +.coin{
+    -webkit-filter: none;
+    -moz-filter: none;
+    filter: none;
+}
+.nocks-nifty-payment-fields .incoming_currency .coin{
+    cursor:pointer;
+    background-size:contain;
+    background-repeat:no-repeat;
+    display:inline-block;
+    width:160px;
+    height: 48px;
+    padding: 10px 0px 0px 60px;
+    -webkit-transition: all 100ms ease-in;
+    -moz-transition: all 100ms ease-in;
+    transition: all 100ms ease-in;
+    -webkit-filter: brightness(1.8) grayscale(1) opacity(.7);
+    -moz-filter: brightness(1.8) grayscale(1) opacity(.7);
+    filter: brightness(1.8) grayscale(1) opacity(.7);
+}
+.nocks-nifty-payment-fields .incoming_currency .coin:hover{
+    -webkit-filter: brightness(1.2) grayscale(.5) opacity(.9);
+    -moz-filter: brightness(1.2) grayscale(.5) opacity(.9);
+    filter: brightness(1.2) grayscale(.5) opacity(.9);
+}
