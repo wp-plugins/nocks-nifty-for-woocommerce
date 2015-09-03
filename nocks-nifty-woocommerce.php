@@ -12,7 +12,7 @@ use GuzzleHttp\Client;
  * Author: Nocks
  * Plugin URI: https://nocks.nl
  * Description: Payment gateway for Nocks
- * Version: 0.0.3
+ * Version: 0.0.4
  */
 
 add_action( 'plugins_loaded', 'init_nocks_nifty' );
@@ -271,10 +271,94 @@ function init_nocks_nifty()
             }
             else
             {
-                echo '<p>Nocks Nifty: Something went wrong, please contact the webmaster.</p>';
+                return '<p>Nocks Nifty: Something went wrong, please contact the webmaster.</p>';
             }
 
             return true;
+        }
+
+        function calculate_estimate_price($incomingCurrency, $amount)
+        {
+            $currency = get_woocommerce_currency();
+            $withdrawal_pair = $this->get_withdrawal_pair($incomingCurrency);
+            $pair = $withdrawal_pair['pair'];
+            $withdrawal = $withdrawal_pair['withdrawal'];
+            $pairX = explode('_', $pair);
+
+            // If fiat currency
+            if(in_array($currency, $this->currencies_fiat)) {
+                // Get fiat in BTC
+                $bitcoinPrice = $this->get_bitcoin_price($currency);
+                $outgoingPrice = $this->get_outgoing_currency_price();
+                if ($incomingCurrency == 'NLG') {
+                    $amount = number_format((($amount / $bitcoinPrice)), 8, '.', '');
+
+                    if($pairX[1] == 'BTC')
+                    {
+                        $amount = $this->nocks_nifty_check_price(array('NLG', 'BTC'), $amount);
+                    }
+                    else
+                    {
+                        $amount = number_format(($amount / $outgoingPrice), 8, '.', '');
+                        $amount = $this->nocks_nifty_check_price(array('NLG', 'NLG'), $amount);
+                    }
+                }
+
+                if ($incomingCurrency == 'BTC') {
+                    $amount = number_format(($amount / $bitcoinPrice), 8, '.', '');
+                    $amount = $this->nocks_nifty_check_price(array('BTC', 'BTC'), $amount);
+                }
+            }
+
+            elseif($incomingCurrency != $pairX[1])
+            {
+                // Incoming currency needs changing
+                $outgoingPrice = $this->get_outgoing_currency_price();
+
+                if($incomingCurrency == 'NLG')
+                {
+                    $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                    $amount = $this->nocks_nifty_check_price($pairX, $amount);
+                }
+
+                if($incomingCurrency == 'BTC')
+                {
+                    $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                    $amount = $this->nocks_nifty_check_price(array('NLG', 'BTC'), $amount);
+                    $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                }
+            }
+            else
+            {
+                if($currency != $pairX[1])
+                {
+                    // Display currency is different
+                    $outgoingPrice = $this->get_outgoing_currency_price();
+
+                    if($incomingCurrency == 'NLG')
+                    {
+                        $amount = number_format(($amount / $outgoingPrice), 8, '.', '');
+                    }
+
+                    if($incomingCurrency == 'BTC')
+                    {
+                        $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                    }
+
+                    $amount = $this->nocks_nifty_check_price(array($pairX[1],$pairX[1]), $amount);
+                }
+                else
+                {
+                    // Display currency is same
+                    $amount = $this->nocks_nifty_check_price($pairX, $amount);
+                }
+            }
+
+            return array(
+                'pair' => $pair,
+                'withdrawal' => $withdrawal,
+                'amount' => $amount
+            );
         }
 
         function calculate_price($incomingCurrency, $amount)
@@ -290,28 +374,63 @@ function init_nocks_nifty()
             {
                 // Get fiat in BTC
                 $bitcoinPrice = $this->get_bitcoin_price($currency);
-                if($pairX[0] == 'NLG')
-                {
-                    $amount = number_format(($amount * $bitcoinPrice), 8, '.', '');
+                $outgoingPrice = $this->get_outgoing_currency_price();
+                if ($incomingCurrency == 'NLG') {
+                    $amount = number_format((($amount / $bitcoinPrice) / $outgoingPrice), 8, '.', '');
+
+                    if($pairX[1] == 'BTC')
+                    {
+                        $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                    }
                 }
-                if($pairX[0] == 'BTC')
-                {
+
+                if ($incomingCurrency == 'BTC') {
                     $amount = number_format(($amount / $bitcoinPrice), 8, '.', '');
+
+                    if($pairX[1] == 'NLG')
+                    {
+                        $amount = number_format(($amount / $outgoingPrice), 8, '.', '');
+                    }
                 }
             }
 
-            // If crypto
-            if($currency != $pairX[0])
+            elseif($incomingCurrency != $pairX[1])
             {
-                // Get in crypto
+                // Incoming currency needs changing
                 $outgoingPrice = $this->get_outgoing_currency_price();
-                if($currency == 'NLG')
+
+                if($incomingCurrency == 'NLG')
                 {
                     $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                    //$amount = $this->nocks_nifty_check_price($pairX, $amount);
                 }
-                if($currency == 'BTC')
+
+                if($incomingCurrency == 'BTC')
                 {
-                    $amount = number_format(($amount / $outgoingPrice), 8, '.', '');
+                    $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                    $amount = $this->nocks_nifty_check_price(array('NLG', 'BTC'), $amount);
+                }
+            }
+            else
+            {
+                if($currency != $pairX[1])
+                {
+                    // Display currency is different
+                    $outgoingPrice = $this->get_outgoing_currency_price();
+
+                    if($incomingCurrency == 'NLG')
+                    {
+                        $amount = number_format(($amount / $outgoingPrice), 8, '.', '');
+                    }
+
+                    if($incomingCurrency == 'BTC')
+                    {
+                        $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                    }
+                }
+                else
+                {
+                    // Display currency is same
                 }
             }
 
