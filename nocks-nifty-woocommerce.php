@@ -12,7 +12,7 @@ use GuzzleHttp\Client;
  * Author: Nocks
  * Plugin URI: https://nocks.nl
  * Description: Payment gateway for Nocks
- * Version: 0.0.2
+ * Version: 0.0.3
  */
 
 add_action( 'plugins_loaded', 'init_nocks_nifty' );
@@ -42,7 +42,9 @@ function init_nocks_nifty()
     {
         public function __construct()
         {
-            $this->valid_currencies = array('EUR', 'USD', 'NLG', 'BTC');
+            $this->currencies_fiat = array('EUR', 'USD');
+            $this->currencies_crypto = array('BTC', 'NLG');
+            $this->valid_currencies = array_merge($this->currencies_fiat, $this->currencies_crypto);
 
             $this->id                   = 'nocks_nifty';
             $this->has_fields           = true;
@@ -281,22 +283,36 @@ function init_nocks_nifty()
             $withdrawal_pair = $this->get_withdrawal_pair($incomingCurrency);
             $pair = $withdrawal_pair['pair'];
             $withdrawal = $withdrawal_pair['withdrawal'];
+            $pairX = explode('_', $pair);
 
             // If fiat currency
-            if(in_array($currency, array('EUR', 'USD')))
+            if(in_array($currency, $this->currencies_fiat))
             {
                 // Get fiat in BTC
                 $bitcoinPrice = $this->get_bitcoin_price($currency);
-                $amount = number_format(($amount/$bitcoinPrice), 8, '.', '');
+                if($pairX[0] == 'NLG')
+                {
+                    $amount = number_format(($amount * $bitcoinPrice), 8, '.', '');
+                }
+                if($pairX[0] == 'BTC')
+                {
+                    $amount = number_format(($amount / $bitcoinPrice), 8, '.', '');
+                }
             }
 
-            // If outgoing price not is BTC
-            $pairX = explode('_', $pair);
-            if($pairX[1] != 'BTC')
+            // If crypto
+            if($currency != $pairX[0])
             {
-                // Calculate outgoing currency price based on bitcoin price
+                // Get in crypto
                 $outgoingPrice = $this->get_outgoing_currency_price();
-                $amount = number_format(($amount/$outgoingPrice), 8, '.', '');
+                if($currency == 'NLG')
+                {
+                    $amount = number_format(($amount * $outgoingPrice), 8, '.', '');
+                }
+                if($currency == 'BTC')
+                {
+                    $amount = number_format(($amount / $outgoingPrice), 8, '.', '');
+                }
             }
 
             return array(
@@ -339,12 +355,12 @@ function init_nocks_nifty()
             $pair = '';
             $withdrawal = '';
 
-            if(in_array($incomingCurrency, array('EUR', 'USD')) && $this->bitcoin_address)
+            if(in_array($incomingCurrency, $this->currencies_fiat) && $this->bitcoin_address)
             {
                 $pair = 'BTC_BTC';
                 $withdrawal = $this->bitcoin_address;
             }
-            elseif(in_array($incomingCurrency, array('EUR', 'USD')) && $this->guldencoin_address)
+            elseif(in_array($incomingCurrency, $this->currencies_fiat) && $this->guldencoin_address)
             {
                 $pair = 'BTC_NLG';
                 $withdrawal = $this->guldencoin_address;
