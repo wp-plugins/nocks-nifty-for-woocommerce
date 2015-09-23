@@ -7,7 +7,9 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'React\\Promise\\' => array($vendorDir . '/react/promise/src'),
+    'Nocks\\SDK\\' => array($vendorDir . '/nocksapp/nocks-sdk-php/src'),
     'GuzzleHttp\\Stream\\' => array($vendorDir . '/guzzlehttp/streams/src'),
     'GuzzleHttp\\Ring\\' => array($vendorDir . '/guzzlehttp/ringphp/src'),
     'GuzzleHttp\\' => array($vendorDir . '/guzzlehttp/guzzle/src'),
+    'Arcanedev\\QrCode\\' => array($vendorDir . '/arcanedev/qr-code/src'),
 );

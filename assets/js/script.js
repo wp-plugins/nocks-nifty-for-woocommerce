@@ -34,7 +34,7 @@
 
         setTimeout(function(){
             $("[name=incoming_currency][value=BTC]").prop('checked', true).change();
-        }, 1000);
+        }, 2000);
     });
 
 } )( jQuery );
