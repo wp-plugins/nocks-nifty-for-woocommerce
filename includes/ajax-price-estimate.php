@@ -7,10 +7,10 @@ function ajax_nocks_nifty_price_estimate()
     $eurAmount = $_REQUEST['data']['amount'];
 
     $nocks_nifty = new WC_Gateway_Nocks_Nifty();
-    $result = $nocks_nifty->calculate_price($incomingCurrency, $eurAmount);
+    $result = $nocks_nifty->calculate_estimate_price($incomingCurrency, $eurAmount);
     $amount = $result['amount'];
     $pair = explode('_', $result['pair']);
-    $amount = $nocks_nifty->nocks_nifty_check_price($pair, $amount);
+    //$amount = $nocks_nifty->nocks_nifty_check_price($pair, $amount);
 
     echo json_encode(array(
         'amount' => number_format($amount, 4, '.', '')

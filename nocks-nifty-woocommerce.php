@@ -5,14 +5,14 @@ require 'includes/currency-nlg.php';
 require 'includes/currency-btc.php';
 require 'includes/ajax-price-estimate.php';
 
-use GuzzleHttp\Client;
+use Nocks\SDK\Nocks;
 
 /**
  * Plugin Name: Nocks Nifty WooCommerce
  * Author: Nocks
  * Plugin URI: https://nocks.nl
  * Description: Payment gateway for Nocks
- * Version: 0.0.4
+ * Version: 0.0.6
  */
 
 add_action( 'plugins_loaded', 'init_nocks_nifty' );
@@ -57,19 +57,13 @@ function init_nocks_nifty()
             $this->description 		    = $this->get_option( 'description' );
             $this->bitcoin_address      = $this->get_option( 'bitcoin_address' );
             $this->guldencoin_address   = $this->get_option( 'guldencoin_address');
-            $this->secure               = $this->get_option( 'secure');
+            $this->fee                  = $this->get_option( 'fee');
             $this->test                 = $this->get_option( 'test');
 
-            // Optional secure SSL connection
-            $this->domain  = 'http://nocks.nl/';
-            if($this->secure)
-            {
-                $this->domain  = 'https://nocks.nl/';
-            }
+            $this->domain = 'https://nocks.nl/';
 
-            $this->client = new Client([
-                'base_url' => $this->domain.'api/'
-            ]);
+            // Nocks SDK
+            $this->nocks = new Nocks();
 
             $this->log = new WC_Logger();
 
@@ -162,7 +156,7 @@ function init_nocks_nifty()
                     'title' => __( 'Description', 'woocommerce' ),
                     'type' => 'textarea',
                     'description' => __( 'This controls the description which the user sees during checkout.', 'woocommerce' ),
-                    'default' => __( 'Pay with Bitcoin or Guldencoin using Nocks', 'woocommerce' )
+                    'default' => __( 'Pay with Bitcoin or Guldens using Nocks', 'woocommerce' )
                 ),
                 'bitcoin_address' => array(
                     'title' => __( 'Bitcoin address', 'woocommerce' ),
@@ -171,20 +165,20 @@ function init_nocks_nifty()
                     'default' => '',
                 ),
                 'guldencoin_address' => array(
-                    'title' => __( 'Guldencoin address', 'woocommerce' ),
+                    'title' => __( 'Gulden address', 'woocommerce' ),
                     'type' 			=> 'text',
-                    'description' => __( 'Please enter your Guldencoin address to receive payout in Guldencoin', 'woocommerce' ),
+                    'description' => __( 'Please enter your Gulden address to receive payout in Guldens', 'woocommerce' ),
                     'default' => '',
                 ),
-                'secure' => array(
-                    'title'       => __( 'Secure SSL connection', 'woocommerce' ),
+                'fee' => array(
+                    'title'       => __( 'Charge transaction fee', 'woocommerce' ),
                     'type'        => 'select',
-                    'description' => __( 'When enabled the connection will be secured with SSL.', 'woocommerce' ),
-                    'default'     => '0',
+                    'description' => __( 'Choose Yes to charge transaction fee (max 1%) to your customer.', 'woocommerce' ),
+                    'default'     => 'deposit',
                     'desc_tip'    => true,
                     'options'     => array(
-                        '0' => __( 'Disabled', 'woocommerce' ),
-                        '1' => __( 'Enabled', 'woocommerce' )
+                        'deposit' => __( 'Yes', 'woocommerce' ),
+                        'withdrawal' => __( 'No', 'woocommerce' )
                     )
                 ),
                 'test' => array(
@@ -228,7 +222,7 @@ function init_nocks_nifty()
                         <label class="coin btc" for="btc">Bitcoin</label>
 
                         <input id="nlg" type="radio" name="incoming_currency" value="NLG" />
-                        <label class="coin nlg" for="nlg">Guldencoin</label>
+                        <label class="coin nlg" for="nlg">Gulden</label>
                     </div>
                     <span class="price-estimate"></span>
                 </div>
@@ -252,7 +246,8 @@ function init_nocks_nifty()
                 'amount' => $payment_option['amount'],
                 'withdrawal' => $payment_option['withdrawal'],
                 'pair' => $payment_option['pair'],
-                'returnUrl' => get_site_url().'/wc-api/wc_gateway_nocks_nifty?order_id='.$order_id.'&return='.$this->get_return_url( $order )
+                'returnUrl' => get_site_url().'/wc-api/wc_gateway_nocks_nifty?order_id='.$order_id.'&return='.$this->get_return_url( $order ),
+                'fee' => $this->fee,
             ));
 
             // is there a Nocks Nifty transaction ?
@@ -517,22 +512,14 @@ function init_nocks_nifty()
 
         function nocks_nifty_create_transaction($transaction)
         {
-            $response = $this->client->post('transaction', array(
-                'headers' => array('Accept' => '*/*'),
-                'json' => $transaction
-            ));
-
-            $response = json_decode($response->getBody()->getContents(), true);
+            $response = $this->nocks->createTransaction($transaction['pair'], $transaction['amount'], $transaction['withdrawal'], $transaction['returnUrl'], $transaction['fee']);
 
             return $response;
         }
 
         function nocks_nifty_check_payment($transactionId)
         {
-            $response = $this->client->get('transaction/'.$transactionId, array(
-                'headers' => array('Accept' => '*/*')
-            ));
-            $response = json_decode($response->getBody()->getContents(), true);
+            $response = $this->nocks->getTransaction($transactionId);
 
             if(isset($response['success']))
             {
@@ -551,45 +538,19 @@ function init_nocks_nifty()
 
         function nocks_nifty_check_price(array $pair, $amount)
         {
-            $response = $this->client->get($this->domain.'checkPrice/'.$pair[0].'/'.$pair[1].'/'.$amount, array(
-                'headers' => array('Accept' => '*/*')
-            ));
-            $response = json_decode($response->getBody()->getContents(), true);
-
-            if(isset($response['result']))
-            {
-                return $response['result'];
-            }
-
-            return false;
+            return $this->nocks->calculatePrice($pair[0].'_'.$pair[1], $amount, ($this->fee == 'withdrawal') ? 'no' : 'yes');
         }
 
         // Powered by CoinDesk
         function get_bitcoin_price($currencyCode)
         {
-            $response = $this->client->get('https://api.coindesk.com/v1/bpi/currentprice.json');
-            $response = json_decode($response->getBody()->getContents(), true);
-
-            if(isset($response['bpi'][$currencyCode]['rate']))
-            {
-                return $response['bpi'][$currencyCode]['rate'];
-            }
-
-            return false;
+            return $this->nocks->getCurrentRate($currencyCode);
         }
 
         // Powered by Bittrex
         function get_outgoing_currency_price()
         {
-            $response = $this->client->get('https://bittrex.com/api/v1.1/public/getticker?market=BTC-NLG');
-            $response = json_decode($response->getBody()->getContents(), true);
-
-            if(isset($response['result']['Last']))
-            {
-                return $response['result']['Last'];
-            }
-
-            return false;
+            return $this->nocks->getCurrentRate('NLG');
         }
     }
 }
